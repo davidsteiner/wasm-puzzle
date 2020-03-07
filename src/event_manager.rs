@@ -8,7 +8,7 @@ use wasm_bindgen::JsCast;
 
 #[allow(dead_code)]
 pub struct EventManager {
-    // These referenced so that they are not dropped until the game is dropped
+    // These are referenced so that they are not dropped until the game is dropped
     onmousedown: Closure<dyn FnMut(web_sys::MouseEvent)>,
     onmouseup: Closure<dyn FnMut(web_sys::MouseEvent)>,
     event_target: web_sys::HtmlElement,

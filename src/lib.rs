@@ -1,3 +1,4 @@
+mod board;
 mod event_manager;
 mod utils;
 
@@ -14,19 +15,23 @@ use wasm_bindgen::JsCast;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-const WORLD_SIZE: f64 = 1000.0;
-
 #[wasm_bindgen]
 pub struct Game {
     event_manager: EventManager,
+    ctx: web_sys::CanvasRenderingContext2d,
+    board: board::Board,
 }
 
 impl Game {
-    fn create(event_manager: EventManager) {
+    fn create(event_manager: EventManager, ctx: web_sys::CanvasRenderingContext2d) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let game = Game { event_manager };
+        let game = Game {
+            event_manager,
+            ctx,
+            board: board::Board::new(4),
+        };
         let mut current_time = 0.0;
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
@@ -49,6 +54,12 @@ impl Game {
 
     fn update(&self, dt: f64) {
         let _ = dt;
+
+        self.render()
+    }
+
+    fn render(&self) {
+        self.board.render(&self.ctx);
     }
 
     fn process_event(&self, event: MouseEvent) {
@@ -62,10 +73,10 @@ impl Game {
 #[wasm_bindgen]
 pub fn setup_game() {
     utils::set_panic_hook();
-    let (canvas, _) = get_context("kirako-canvas");
+    let (canvas, ctx) = get_context("kirako-canvas");
     let event_manager = EventManager::new(canvas.unchecked_into::<web_sys::HtmlElement>());
 
-    Game::create(event_manager);
+    Game::create(event_manager, ctx);
 }
 
 fn request_animation_frame(f: &Closure<dyn FnMut(f64)>) {
@@ -94,12 +105,12 @@ fn get_context(
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
-    ctx.set_font("30px Arial");
+    ctx.set_font("64px Arial");
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
 
-    let scale_x = canvas.width() as f64 / WORLD_SIZE;
-    let scale_y = canvas.height() as f64 / WORLD_SIZE;
+    let scale_x = canvas.width() as f64 / board::BOARD_SIZE;
+    let scale_y = canvas.height() as f64 / board::BOARD_SIZE;
 
     ctx.scale(scale_x, scale_y).unwrap();
 
