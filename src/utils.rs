@@ -22,3 +22,8 @@ extern "C" {
 pub fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
+
+pub struct Coordinate {
+    pub x: i32,
+    pub y: i32,
+}

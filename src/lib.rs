@@ -20,6 +20,7 @@ pub struct Game {
     event_manager: EventManager,
     ctx: web_sys::CanvasRenderingContext2d,
     board: board::Board,
+    mouse_down: Option<event_manager::MouseEvent>,
 }
 
 impl Game {
@@ -27,10 +28,11 @@ impl Game {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let game = Game {
+        let mut game = Game {
             event_manager,
             ctx,
-            board: board::Board::new(4),
+            board: board::Board::new(3),
+            mouse_down: None,
         };
         let mut current_time = 0.0;
 
@@ -62,11 +64,51 @@ impl Game {
         self.board.render(&self.ctx);
     }
 
-    fn process_event(&self, event: MouseEvent) {
-        match event {
-            MouseEvent::Up(c) => utils::log(&format!("Mouse up ({}, {})", c.x, c.y)),
-            MouseEvent::Down(c) => utils::log(&format!("Mouse down ({}, {})", c.x, c.y)),
+    fn process_event(&mut self, event: MouseEvent) {
+        match &event {
+            MouseEvent::Up(c) => {
+                let drag = self.get_drag(c);
+                if let Some((origin, vec)) = drag {
+                    self.shift(&origin, &vec);
+                }
+            }
+            MouseEvent::Down(_) => self.mouse_down = Some(event),
         }
+    }
+
+    fn get_drag(
+        &self,
+        up_pos: &utils::Coordinate,
+    ) -> Option<(utils::Coordinate, utils::Coordinate)> {
+        if let Some(MouseEvent::Down(down_pos)) = &self.mouse_down {
+            let vec = utils::Coordinate {
+                x: up_pos.x - down_pos.x,
+                y: up_pos.y - down_pos.y,
+            };
+            if vec.x.pow(2) + vec.y.pow(2) > 200 {
+                return Some((
+                    utils::Coordinate {
+                        x: down_pos.x,
+                        y: down_pos.y,
+                    },
+                    vec,
+                ));
+            }
+        }
+        return None;
+    }
+
+    fn shift(&mut self, origin: &utils::Coordinate, vec: &utils::Coordinate) {
+        let element: web_sys::HtmlElement = self.ctx.canvas().unwrap().unchecked_into();
+        let canvas_rect = element.get_bounding_client_rect();
+
+        // Calculate the origin coordinates in the boards coordinate system
+        let board_x =
+            ((origin.x as f64 - canvas_rect.x()) / canvas_rect.width()) * board::BOARD_SIZE;
+        let board_y =
+            ((origin.y as f64 - canvas_rect.y()) / canvas_rect.height()) * board::BOARD_SIZE;
+
+        self.board.shift((board_x, board_y), vec);
     }
 }
 

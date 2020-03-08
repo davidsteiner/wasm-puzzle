@@ -1,4 +1,4 @@
-use crate::utils::log;
+use crate::utils::{log, Coordinate};
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -13,11 +13,6 @@ pub struct EventManager {
     onmouseup: Closure<dyn FnMut(web_sys::MouseEvent)>,
     event_target: web_sys::HtmlElement,
     event_queue: Rc<RefCell<VecDeque<MouseEvent>>>,
-}
-
-pub struct Coordinate {
-    pub x: i32,
-    pub y: i32,
 }
 
 pub enum MouseEvent {
