@@ -1,4 +1,4 @@
-use crate::utils::{log, Coordinate};
+use crate::utils::{log, window, Coordinate};
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -46,7 +46,7 @@ impl EventManager {
                 }));
         };
         let onmouseup = Closure::wrap(Box::new(cb) as Box<dyn FnMut(_)>);
-        event_target.set_onmouseup(Some(onmouseup.as_ref().unchecked_ref()));
+        window().set_onmouseup(Some(onmouseup.as_ref().unchecked_ref()));
 
         log("Added event manager");
 
@@ -66,7 +66,7 @@ impl EventManager {
 impl Drop for EventManager {
     fn drop(&mut self) {
         self.event_target.set_onmousedown(None);
-        self.event_target.set_onmouseup(None);
+        window().set_onmouseup(None);
         log("Dropping event manager");
     }
 }
