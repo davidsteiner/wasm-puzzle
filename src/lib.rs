@@ -5,7 +5,7 @@ mod utils;
 use event_manager::{EventManager, MouseEvent};
 use std::cell::RefCell;
 use std::rc::Rc;
-use utils::window;
+use utils::{window, Point};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -20,7 +20,12 @@ pub struct Game {
     event_manager: EventManager,
     ctx: web_sys::CanvasRenderingContext2d,
     board: board::Board,
-    mouse_down: Option<event_manager::MouseEvent>,
+    game_state: GameState,
+}
+
+enum GameState {
+    Idle,
+    Dragging(Point<i32>),
 }
 
 impl Game {
@@ -32,7 +37,7 @@ impl Game {
             event_manager,
             ctx,
             board: board::Board::new(3),
-            mouse_down: None,
+            game_state: GameState::Idle,
         };
         let mut current_time = 0.0;
 
@@ -65,50 +70,43 @@ impl Game {
     }
 
     fn process_event(&mut self, event: MouseEvent) {
-        match &event {
-            MouseEvent::Up(c) => {
-                let drag = self.get_drag(c);
-                if let Some((origin, vec)) = drag {
-                    self.shift(&origin, &vec);
+        match self.game_state {
+            GameState::Idle => {
+                if let MouseEvent::Down(point) = event {
+                    self.game_state = GameState::Dragging(point);
                 }
             }
-            MouseEvent::Down(_) => self.mouse_down = Some(event),
+            GameState::Dragging(from) => match event {
+                MouseEvent::Move(to) => self.process_dragging(from, to),
+                MouseEvent::Up(to) => self.process_drag_over(from, to),
+                MouseEvent::Down(to) => self.process_drag_over(from, to),
+            },
         }
     }
 
-    fn get_drag(
-        &self,
-        up_pos: &utils::Coordinate,
-    ) -> Option<(utils::Coordinate, utils::Coordinate)> {
-        if let Some(MouseEvent::Down(down_pos)) = &self.mouse_down {
-            let vec = utils::Coordinate {
-                x: up_pos.x - down_pos.x,
-                y: up_pos.y - down_pos.y,
-            };
-            if vec.x.pow(2) + vec.y.pow(2) > 200 {
-                return Some((
-                    utils::Coordinate {
-                        x: down_pos.x,
-                        y: down_pos.y,
-                    },
-                    vec,
-                ));
-            }
-        }
-        return None;
+    fn process_dragging(&mut self, from: Point<i32>, to: Point<i32>) {
+        self.board.shift(
+            &self.to_board_point(&from),
+            &self.to_board_point(&to),
+            false,
+        );
     }
 
-    fn shift(&mut self, origin: &utils::Coordinate, vec: &utils::Coordinate) {
+    fn process_drag_over(&mut self, from: Point<i32>, to: Point<i32>) {
+        self.board
+            .shift(&self.to_board_point(&from), &self.to_board_point(&to), true);
+        self.game_state = GameState::Idle;
+    }
+
+    fn to_board_point(&self, point: &Point<i32>) -> Point<f64> {
         let element: web_sys::HtmlElement = self.ctx.canvas().unwrap().unchecked_into();
         let canvas_rect = element.get_bounding_client_rect();
 
         // Calculate the origin coordinates in the boards coordinate system
-        let board_x =
-            ((origin.x as f64 - canvas_rect.x()) / canvas_rect.width()) * board::BOARD_SIZE;
-        let board_y =
-            ((origin.y as f64 - canvas_rect.y()) / canvas_rect.height()) * board::BOARD_SIZE;
+        let x = ((point.x as f64 - canvas_rect.x()) / canvas_rect.width()) * board::BOARD_SIZE;
+        let y = ((point.y as f64 - canvas_rect.y()) / canvas_rect.height()) * board::BOARD_SIZE;
 
-        self.board.shift((board_x, board_y), vec);
+        Point { x, y }
     }
 }
 

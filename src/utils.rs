@@ -23,7 +23,8 @@ pub fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
 }
 
-pub struct Coordinate {
-    pub x: i32,
-    pub y: i32,
+#[derive(Copy, Clone, Debug)]
+pub struct Point<T: Copy> {
+    pub x: T,
+    pub y: T,
 }
