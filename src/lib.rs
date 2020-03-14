@@ -1,8 +1,10 @@
 mod board;
 mod event_manager;
+mod shuffle;
 mod utils;
 
 use event_manager::{EventManager, MouseEvent};
+use shuffle::{shuffle, ShiftAction};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
@@ -31,44 +33,19 @@ enum GameState {
     Processing,
 }
 
-struct ShiftAction {
-    current_offset: f64,
-    remaining_time: f64,
-    idx: u8,
-    direction: Direction,
-}
-
-impl ShiftAction {
-    fn create(idx: u8, direction: Direction) -> ShiftAction {
-        ShiftAction {
-            current_offset: 0.0,
-            remaining_time: 800.0,
-            idx: idx,
-            direction: direction,
-        }
-    }
-}
-
 impl Game {
     fn create(event_manager: EventManager, ctx: web_sys::CanvasRenderingContext2d) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
+        let board_size = 3;
         let mut game = Game {
             event_manager,
             ctx,
-            board: board::Board::new(3),
-            game_state: GameState::Processing,
-            actions: VecDeque::new(),
+            board: board::Board::new(board_size),
+            game_state: GameState::Idle,
+            actions: shuffle(board_size, 10),
         };
-        game.actions
-            .push_back(ShiftAction::create(2, Direction::South));
-        game.actions
-            .push_back(ShiftAction::create(2, Direction::North));
-        game.actions
-            .push_back(ShiftAction::create(2, Direction::East));
-        game.actions
-            .push_back(ShiftAction::create(2, Direction::West));
         let mut current_time = 0.0;
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
