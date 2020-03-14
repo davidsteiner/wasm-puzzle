@@ -4,8 +4,9 @@ mod utils;
 
 use event_manager::{EventManager, MouseEvent};
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
-use utils::{window, Point};
+use utils::{window, Direction, Point};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -21,11 +22,31 @@ pub struct Game {
     ctx: web_sys::CanvasRenderingContext2d,
     board: board::Board,
     game_state: GameState,
+    actions: VecDeque<ShiftAction>,
 }
 
 enum GameState {
     Idle,
     Dragging(Point<i32>),
+    Processing,
+}
+
+struct ShiftAction {
+    current_offset: f64,
+    remaining_time: f64,
+    idx: u8,
+    direction: Direction,
+}
+
+impl ShiftAction {
+    fn create(idx: u8, direction: Direction) -> ShiftAction {
+        ShiftAction {
+            current_offset: 0.0,
+            remaining_time: 800.0,
+            idx: idx,
+            direction: direction,
+        }
+    }
 }
 
 impl Game {
@@ -37,8 +58,17 @@ impl Game {
             event_manager,
             ctx,
             board: board::Board::new(3),
-            game_state: GameState::Idle,
+            game_state: GameState::Processing,
+            actions: VecDeque::new(),
         };
+        game.actions
+            .push_back(ShiftAction::create(2, Direction::South));
+        game.actions
+            .push_back(ShiftAction::create(2, Direction::North));
+        game.actions
+            .push_back(ShiftAction::create(2, Direction::East));
+        game.actions
+            .push_back(ShiftAction::create(2, Direction::West));
         let mut current_time = 0.0;
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
@@ -47,22 +77,56 @@ impl Game {
 
             game.update(dt);
 
-            loop {
-                match game.event_manager.pop_event() {
-                    Some(ev) => game.process_event(ev),
-                    None => break,
-                };
-            }
             request_animation_frame(f.borrow().as_ref().unwrap());
         }) as Box<dyn FnMut(_)>));
 
         request_animation_frame(g.borrow().as_ref().unwrap());
     }
 
-    fn update(&self, dt: f64) {
-        let _ = dt;
+    fn update(&mut self, dt: f64) {
+        self.process_actions(dt);
+
+        loop {
+            match self.event_manager.pop_event() {
+                Some(ev) => self.process_event(ev),
+                None => break,
+            };
+        }
 
         self.render()
+    }
+
+    fn process_actions(&mut self, dt: f64) {
+        match self.actions.front_mut() {
+            Some(action) => {
+                self.game_state = GameState::Processing;
+
+                let tile_size = self.board.tile_size();
+                action.current_offset += ((dt / action.remaining_time)
+                    * (tile_size - action.current_offset))
+                    .min(tile_size);
+                let from = match action.direction {
+                    Direction::North | Direction::South => Point {
+                        x: ((action.idx as f64) + 0.5) * tile_size,
+                        y: 1.5 * tile_size,
+                    },
+                    Direction::West | Direction::East => Point {
+                        x: 1.5 * tile_size,
+                        y: ((action.idx as f64) + 0.5) * tile_size,
+                    },
+                };
+                let to = from.add_direction(&action.direction, action.current_offset);
+                action.remaining_time -= dt;
+
+                if action.remaining_time < 0.0 {
+                    self.board.shift(&from, &to, true);
+                    self.actions.pop_front();
+                } else {
+                    self.board.shift(&from, &to, false);
+                }
+            }
+            None => self.game_state = GameState::Idle,
+        }
     }
 
     fn render(&self) {
@@ -81,6 +145,7 @@ impl Game {
                 MouseEvent::Up(to) => self.process_drag_over(from, to),
                 MouseEvent::Down(to) => self.process_drag_over(from, to),
             },
+            _ => (),
         }
     }
 

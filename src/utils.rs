@@ -1,3 +1,4 @@
+use num::Num;
 use wasm_bindgen::prelude::*;
 
 pub fn set_panic_hook() {
@@ -24,7 +25,37 @@ pub fn window() -> web_sys::Window {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Point<T: Copy> {
+pub struct Point<T: Copy + Num> {
     pub x: T,
     pub y: T,
+}
+
+impl<T: Copy + Num> Point<T> {
+    pub fn add_direction(&self, direction: &Direction, distance: T) -> Point<T> {
+        match direction {
+            Direction::North => Point {
+                x: self.x,
+                y: self.y - distance,
+            },
+            Direction::South => Point {
+                x: self.x,
+                y: self.y + distance,
+            },
+            Direction::West => Point {
+                x: self.x - distance,
+                y: self.y,
+            },
+            Direction::East => Point {
+                x: self.x + distance,
+                y: self.y,
+            },
+        }
+    }
+}
+
+pub enum Direction {
+    North,
+    South,
+    West,
+    East,
 }

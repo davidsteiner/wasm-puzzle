@@ -124,8 +124,8 @@ impl Board {
     fn get_shift_vector(&mut self, from: &Point<f64>, to: &Point<f64>) -> Point<f64> {
         let tile_size = self.tile_size();
         let mut v = Point {
-            x: (to.x - from.x) / 2.0,
-            y: (to.y - from.y) / 2.0,
+            x: to.x - from.x,
+            y: to.y - from.y,
         };
 
         // Figure out which way we cannot move horizontally, and update the vector accordingly
@@ -170,7 +170,7 @@ impl Board {
         }
     }
 
-    fn tile_size(&self) -> f64 {
+    pub fn tile_size(&self) -> f64 {
         BOARD_SIZE / ((self.size + 2) as f64)
     }
 
