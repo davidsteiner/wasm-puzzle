@@ -97,35 +97,34 @@ impl Game {
     }
 
     fn process_actions(&mut self, dt: f64) {
-        match self.actions.front_mut() {
-            Some(action) => {
-                self.game_state = GameState::Processing;
+        if let Some(action) = self.actions.front_mut() {
+            self.game_state = GameState::Processing;
 
-                let tile_size = self.board.tile_size();
-                action.current_offset += ((dt / action.remaining_time)
-                    * (tile_size - action.current_offset))
-                    .min(tile_size);
-                let from = match action.direction {
-                    Direction::North | Direction::South => Point {
-                        x: ((action.idx as f64) + 0.5) * tile_size,
-                        y: 1.5 * tile_size,
-                    },
-                    Direction::West | Direction::East => Point {
-                        x: 1.5 * tile_size,
-                        y: ((action.idx as f64) + 0.5) * tile_size,
-                    },
-                };
-                let to = from.add_direction(&action.direction, action.current_offset);
-                action.remaining_time -= dt;
+            let tile_size = self.board.tile_size();
+            action.current_offset +=
+                ((dt / action.remaining_time) * (tile_size - action.current_offset)).min(tile_size);
+            let from = match action.direction {
+                Direction::North | Direction::South => Point {
+                    x: ((action.idx as f64) + 0.5) * tile_size,
+                    y: 1.5 * tile_size,
+                },
+                Direction::West | Direction::East => Point {
+                    x: 1.5 * tile_size,
+                    y: ((action.idx as f64) + 0.5) * tile_size,
+                },
+            };
+            let to = from.add_direction(&action.direction, action.current_offset);
+            action.remaining_time -= dt;
 
-                if action.remaining_time < 0.0 {
-                    self.board.shift(&from, &to, true);
-                    self.actions.pop_front();
-                } else {
-                    self.board.shift(&from, &to, false);
+            if action.remaining_time < 0.0 {
+                self.board.shift(&from, &to, true);
+                self.actions.pop_front();
+                if self.actions.is_empty() {
+                    self.game_state = GameState::Idle;
                 }
+            } else {
+                self.board.shift(&from, &to, false);
             }
-            None => self.game_state = GameState::Idle,
         }
     }
 
