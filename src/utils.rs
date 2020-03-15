@@ -53,6 +53,36 @@ impl<T: Copy + Num> Point<T> {
     }
 }
 
+impl<T: Copy + Num> std::ops::Add<Point<T>> for Point<T> {
+    type Output = Point<T>;
+    fn add(self, rhs: Point<T>) -> Point<T> {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
+impl<T: Copy + Num> std::ops::Sub<Point<T>> for Point<T> {
+    type Output = Point<T>;
+    fn sub(self, rhs: Point<T>) -> Point<T> {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl<T: Copy + Num> std::ops::Div<T> for Point<T> {
+    type Output = Point<T>;
+    fn div(self, rhs: T) -> Point<T> {
+        Point {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
 pub enum Direction {
     North,
     South,

@@ -231,6 +231,9 @@ impl Tile {
         ctx.stroke_rect(x, y, size, size);
 
         ctx.set_stroke_style(&"rgb(255,255,255)".into());
+        ctx.set_fill_style(&"rgb(255,255,255)".into());
+        ctx.fill_text(&self.label, x + 0.5 * size, y + 0.5 * size)
+            .unwrap();
         ctx.stroke_text(&self.label, x + 0.5 * size, y + 0.5 * size)
             .unwrap();
     }

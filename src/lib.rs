@@ -106,6 +106,15 @@ impl Game {
     }
 
     fn render(&self) {
+        let canvas = self.ctx.canvas().unwrap();
+        let scale_x = canvas.width() as f64 / board::BOARD_SIZE;
+        let scale_y = canvas.height() as f64 / board::BOARD_SIZE;
+        self.ctx.reset_transform().unwrap();
+        self.ctx.scale(scale_x, scale_y).unwrap();
+        self.ctx.set_font("128px Arial");
+        self.ctx.set_text_align("center");
+        self.ctx.set_text_baseline("middle");
+
         self.board.render(&self.ctx);
     }
 
@@ -126,16 +135,21 @@ impl Game {
     }
 
     fn process_dragging(&mut self, from: Point<i32>, to: Point<i32>) {
+        let scaled_to = (to - from) / 2 + from;
         self.board.shift(
             &self.to_board_point(&from),
-            &self.to_board_point(&to),
+            &self.to_board_point(&scaled_to),
             false,
         );
     }
 
     fn process_drag_over(&mut self, from: Point<i32>, to: Point<i32>) {
-        self.board
-            .shift(&self.to_board_point(&from), &self.to_board_point(&to), true);
+        let scaled_to = (to - from) / 2 + from;
+        self.board.shift(
+            &self.to_board_point(&from),
+            &self.to_board_point(&scaled_to),
+            true,
+        );
         self.game_state = GameState::Idle;
     }
 
@@ -154,7 +168,7 @@ impl Game {
 #[wasm_bindgen]
 pub fn setup_game() {
     utils::set_panic_hook();
-    let (canvas, ctx) = get_context("kirako-canvas");
+    let (canvas, ctx) = get_context("puzzle-canvas");
     let event_manager = EventManager::new(canvas.unchecked_into::<web_sys::HtmlElement>());
 
     Game::create(event_manager, ctx);
@@ -185,15 +199,6 @@ fn get_context(
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
-
-    ctx.set_font("64px Arial");
-    ctx.set_text_align("center");
-    ctx.set_text_baseline("middle");
-
-    let scale_x = canvas.width() as f64 / board::BOARD_SIZE;
-    let scale_y = canvas.height() as f64 / board::BOARD_SIZE;
-
-    ctx.scale(scale_x, scale_y).unwrap();
 
     return (canvas, ctx);
 }
